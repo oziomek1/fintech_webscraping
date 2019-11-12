@@ -1,7 +1,7 @@
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys 
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -95,7 +95,7 @@ class Scraper:
 		base_element -- parent element in html hierarchy
 		"""
 		multiple_elements = self._executor.wait_for_all_elements_presence_and_get(
-			timeout=timeout, 
+			timeout=timeout,
 			xpath=xpath,
 			base_element=base_element,
 		)
@@ -116,8 +116,8 @@ class Scraper:
 		store_text -- define if storing text or element
 		"""
 		single_element = self._executor.wait_for_element_presence_and_get(
-			timeout=timeout, 
-			xpath=xpath, 
+			timeout=timeout,
+			xpath=xpath,
 			base_element=base_element,
 		)
 		value_to_be_stored = single_element.text if store_text else single_element
@@ -135,8 +135,8 @@ class Scraper:
 		base_element -- parent element in html hierarchy
 		"""
 		element_to_resolve = self._executor.wait_for_element_presence_and_get(
-			timeout=timeout, 
-			xpath=xpath, 
+			timeout=timeout,
+			xpath=xpath,
 			base_element=base_element,
 		)
 		resolved_elements = self._data_processor.convert_views_and_date(element_to_resolve=element_to_resolve.text)
@@ -187,11 +187,11 @@ class Executor:
 	def wait_for_all_elements_presence_and_get(self, timeout=5, xpath='//div', base_element=None):
 		"""
 		Wait for multiple web elements to present
-		
+
 		Arguments:
 		timeout -- timeout for all elements presence
 		xpath -- path of website element
-		
+
 		Returns list of elements
 		"""
 		return WebDriverWait(base_element, timeout).until(
@@ -222,19 +222,19 @@ class DataProcessor:
 		return {'views': views, 'date': date}
 
 	def safe_casting(self, value, to_type, default=None):
-		"""Cast string to desired type""" 
+		"""Cast string to desired type"""
 		try:
 			return to_type(value)
 		except (ValueError, TypeError):
 			return default
 
 	def safe_json(self, value, output_name='output.json'):
-		"""Save data to json""" 
+		"""Save data to json"""
 		with open(output_name, 'w') as outfile:
 			json.dump(value, outfile)
 
 base_link = 'https://www.smartkarma.com/insights'
-options = []#['--headless']
+options = ['--headless']
 settings = {
 	'primary_timeout': 5,
 	'secondary_timeout': 2,
@@ -260,8 +260,10 @@ scraped_insights = []
 scraper = Scraper(options=options, **settings)
 scraper.get_current_driver_window()
 
+print('initialization...')
 for sector_name, sector_postfix in sectors.items():
 	scraper.open_new_link(base_link + sector_prefix + sector_postfix)
+	scraper.scroll_down()
 	scraper.get_multiple_elements(
 		timeout=settings['primary_timeout'],
 		xpath='//a[contains(@class, "sk-insight-snippet__headline")]',
@@ -269,13 +271,12 @@ for sector_name, sector_postfix in sectors.items():
 		base_element=scraper.return_driver_instance(),
 		store_text=True,
 	)
-
 for sector_name in sectors.keys():
 	print('Links in sector: ', sector_name, ':', len(scraper.stored_multiple_elements[sector_name]))
 
 	for index, link in enumerate(scraper.stored_multiple_elements[sector_name]):
 		print(index, link)
-		try: 
+		try:
 			scraper.open_new_tab(link)
 
 			"""AUTHOR"""
@@ -322,7 +323,7 @@ for sector_name in sectors.keys():
 				store_text=True,
 			)
 
-			"""HEADLINE""" 
+			"""HEADLINE"""
 			headline_section = scraper.get_single_element(
 				timeout=settings['primary_timeout'],
 				xpath='//div[contains(@class, "sk-insight-longform__title-container")]',
@@ -350,7 +351,7 @@ for sector_name in sectors.keys():
 				key='content',
 				base_element=scraper.return_driver_instance(),
 				store_text=True,
-			) 
+			)
 			scraper.close_new_tab()
 
 			data = PageData(
@@ -378,4 +379,3 @@ for sector_name in sectors.keys():
 scraper.driver_wrapper.quit()
 
 scraper._data_processor.safe_json(scraped_insights)
-
